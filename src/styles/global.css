@@ -1,12 +1,10 @@
-/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* stylelint-enable at-rule-no-unknown */
 
 @layer base {
-  html { 
-    scroll-behavior: smooth; 
+  html {
+    scroll-behavior: smooth;
   }
   body {
     background-color: #050508;
@@ -20,18 +18,18 @@
     background: rgba(99, 102, 241, 0.3);
     color: #fff;
   }
-  ::-webkit-scrollbar { 
-    width: 6px; 
+  ::-webkit-scrollbar {
+    width: 6px;
   }
-  ::-webkit-scrollbar-track { 
-    background: transparent; 
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
-  ::-webkit-scrollbar-thumb { 
-    background: rgba(255,255,255,0.1); 
-    border-radius: 3px; 
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover { 
-    background: rgba(255,255,255,0.2); 
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.2);
   }
 }
 
@@ -48,8 +46,8 @@
     -webkit-backdrop-filter: blur(40px);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  .glow-border { 
-    position: relative; 
+  .glow-border {
+    position: relative;
   }
   .glow-border::before {
     content: '';
@@ -65,8 +63,8 @@
     opacity: 0;
     transition: opacity 0.4s ease;
   }
-  .glow-border:hover::before { 
-    opacity: 1; 
+  .glow-border:hover::before {
+    opacity: 1;
   }
   .text-gradient {
     background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #67e8f9 100%);
