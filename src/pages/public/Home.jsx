@@ -1,23 +1,40 @@
+import { useEffect } from "react";
+import Hero from "../../components/home/Hero";
+import TrustedCompanies from "../../components/home/TrustedCompanies";
+import Categories from "../../components/home/Categories";
+import FeaturedCourses from "../../components/home/FeaturedCourses";
+import WhyChooseUs from "../../components/home/WhyChooseUs";
+import AILearning from "../../components/home/AILearning";
+import LearningJourney from "../../components/home/LearningJourney";
+import InternshipSection from "../../components/home/InternshipSection";
+import Testimonials from "../../components/home/Testimonials";
+import Stats from "../../components/home/Stats";
+import Pricing from "../../components/home/Pricing";
+import FAQ from "../../components/home/FAQ";
+import FinalCTA from "../../components/home/FinalCTA";
+import Footer from "../../components/common/Footer";
+
 export default function Home() {
+  useEffect(() => {
+    document.title = "EduPlatform — Learn Skills. Build Your Future.";
+  }, []);
+
   return (
-    <main>
-      <div style={{ 
-        backgroundColor: '#F8FAFC', 
-        minHeight: '90vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        gap: '20px',
-        padding: '40px'
-      }}>
-        <h1 style={{ color: '#0F172A', fontSize: '48px', fontWeight: 'bold' }}>
-          TEST — IS THIS LIGHT?
-        </h1>
-        <p style={{ color: '#475569', fontSize: '18px' }}>
-          If you see light gray, the page works.
-        </p>
-      </div>
+    <main className="min-h-screen overflow-hidden bg-[#050508] text-slate-50">
+      <Hero />
+      <TrustedCompanies />
+      <Categories />
+      <FeaturedCourses />
+      <WhyChooseUs />
+      <AILearning />
+      <LearningJourney />
+      <InternshipSection />
+      <Testimonials />
+      <Stats />
+      <Pricing />
+      <FAQ />
+      <FinalCTA />
+      <Footer />
     </main>
-  )
+  );
 }
