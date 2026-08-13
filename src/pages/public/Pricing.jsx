@@ -1,114 +1,127 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Sparkles, Zap, ArrowRight } from 'lucide-react'
-import { GlassCard } from '../../components/ui/GlassCard'
-import { GlowButton } from '../../components/ui/GlowButton'
-import { SectionTitle } from '../../components/ui/SectionTitle'
+import { motion } from "framer-motion";
+import { Check, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const plans = [
   {
-    name: 'Starter',
-    description: 'Perfect for exploring',
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    features: ['5 AI-generated quizzes/month', 'Basic study planner', 'Community access', '3 course previews', 'Email support'],
-    cta: 'Start Free',
-    popular: false,
+    name: "Starter",
+    price: "$0",
+    description: "For learners exploring new skills.",
+    features: [
+      "Selected courses",
+      "Learning resources",
+      "Community access",
+      "Basic progress tracking",
+    ],
   },
   {
-    name: 'Pro',
-    description: 'For serious learners',
-    monthlyPrice: 29,
-    yearlyPrice: 290,
-    features: ['Unlimited AI quizzes', 'AI Mentor 24/7', 'Full course library', 'Project reviews', 'Resume builder', 'Interview coach', 'Priority support'],
-    cta: 'Start Pro Trial',
+    name: "Professional",
+    price: "$29",
+    description: "For serious learners building practical skills.",
+    features: [
+      "Full course library",
+      "Live classes",
+      "AI learning assistance",
+      "Assignments",
+      "Projects",
+      "Certificates",
+    ],
     popular: true,
   },
   {
-    name: 'Enterprise',
-    description: 'For teams & organizations',
-    monthlyPrice: 99,
-    yearlyPrice: 990,
-    features: ['Everything in Pro', 'Team management', 'Custom curriculum', 'Priority support', 'White-label options', 'API access', 'Dedicated account manager'],
-    cta: 'Contact Sales',
-    popular: false,
+    name: "Career",
+    price: "$59",
+    description: "For learners preparing for professional opportunities.",
+    features: [
+      "Everything in Professional",
+      "Internship opportunities",
+      "Career support",
+      "Portfolio guidance",
+      "Interview preparation",
+      "Priority support",
+    ],
   },
-]
+];
 
-export default function Pricing() {
-  const [isYearly, setIsYearly] = useState(false)
-
+export default function PricingPage() {
   return (
-    <div className="relative">
-      <section className="pt-32 pb-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-bg via-bg-secondary to-bg" />
-        <div className="relative z-10 max-w-6xl mx-auto px-6">
-          <SectionTitle
-            label="Pricing"
-            title="Invest in Your Future"
-            description="Choose the plan that fits your goals. All plans include a 14-day free trial."
-          />
+    <main className="min-h-screen bg-[#050508] px-5 pb-24 pt-32 text-white sm:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-400">
+            Pricing
+          </p>
 
-          {/* Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-16">
-            <span className={`text-sm font-medium transition-colors ${!isYearly ? 'text-white' : 'text-text-muted'}`}>Monthly</span>
-            <button onClick={() => setIsYearly(!isYearly)} className="relative w-14 h-7 rounded-full bg-white/10 transition-colors">
-              <motion.div animate={{ x: isYearly ? 28 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="absolute top-1 w-5 h-5 rounded-full bg-primary" />
-            </button>
-            <span className={`text-sm font-medium transition-colors ${isYearly ? 'text-white' : 'text-text-muted'}`}>Yearly</span>
-            {isYearly && <span className="px-2 py-1 rounded-full bg-success/10 text-success text-xs font-bold">Save 20%</span>}
-          </div>
+          <h1 className="mt-5 text-4xl font-bold sm:text-6xl">
+            Invest in your{" "}
+            <span className="text-gradient">next skill.</span>
+          </h1>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan, i) => (
-              <motion.div key={plan.name} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: i * 0.15, duration: 0.6 }} className={`relative ${plan.popular ? 'md:-mt-4 md:mb-4' : ''}`}>
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
-                    <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-primary to-accent text-white text-xs font-bold">
-                      <Sparkles className="w-3 h-3" /> Most Popular
-                    </div>
-                  </div>
-                )}
-                <GlassCard glow={plan.popular} className={`h-full ${plan.popular ? 'border-primary/30 bg-primary/5' : ''}`}>
-                  <div className="mb-6">
-                    <h3 className="text-xl font-display font-bold mb-1">{plan.name}</h3>
-                    <p className="text-sm text-text-muted">{plan.description}</p>
-                  </div>
-                  <div className="mb-6">
-                    <AnimatePresence mode="wait">
-                      <motion.div key={isYearly ? 'yearly' : 'monthly'}
-                        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                        className="flex items-baseline gap-1">
-                        <span className="text-4xl font-display font-bold">${isYearly ? plan.yearlyPrice : plan.monthlyPrice}</span>
-                        {plan.monthlyPrice > 0 && <span className="text-text-muted">/{isYearly ? 'year' : 'month'}</span>}
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                  <ul className="space-y-3 mb-8">
-                    {plan.features.map(f => (
-                      <li key={f} className="flex items-center gap-3 text-sm text-text-secondary">
-                        <Check className="w-4 h-4 text-success flex-shrink-0" />{f}
-                      </li>
-                    ))}
-                  </ul>
-                  <GlowButton variant={plan.popular ? 'primary' : 'secondary'} className="w-full">{plan.cta}</GlowButton>
-                </GlassCard>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* FAQ Teaser */}
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="mt-16 text-center">
-            <p className="text-text-secondary mb-4">Have questions about our pricing?</p>
-            <a href="/faq" className="inline-flex items-center gap-2 text-primary-light hover:text-white transition-colors">
-              Visit our FAQ <ArrowRight className="w-4 h-4" />
-            </a>
-          </motion.div>
+          <p className="mt-5 leading-7 text-slate-400">
+            Choose a plan that matches where you are today and where you want
+            to go next.
+          </p>
         </div>
-      </section>
-    </div>
-  )
+
+        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          {plans.map((plan, index) => (
+            <motion.div
+              key={plan.name}
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              className={`relative rounded-3xl border p-7 ${
+                plan.popular
+                  ? "border-indigo-500/50 bg-indigo-500/10"
+                  : "border-white/10 bg-white/[0.035]"
+              }`}
+            >
+              {plan.popular && (
+                <span className="absolute -top-3 left-6 rounded-full bg-indigo-600 px-3 py-1 text-xs font-bold">
+                  RECOMMENDED
+                </span>
+              )}
+
+              <h2 className="text-xl font-bold">{plan.name}</h2>
+
+              <p className="mt-3 min-h-12 text-sm leading-6 text-slate-400">
+                {plan.description}
+              </p>
+
+              <div className="mt-7 text-5xl font-bold">{plan.price}</div>
+
+              <p className="mt-1 text-sm text-slate-500">per month</p>
+
+              <div className="my-7 h-px bg-white/10" />
+
+              <ul className="space-y-4">
+                {plan.features.map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex gap-3 text-sm text-slate-300"
+                  >
+                    <Check className="h-5 w-5 shrink-0 text-green-400" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                to="/register"
+                className={`mt-8 flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-semibold ${
+                  plan.popular
+                    ? "bg-indigo-600 hover:bg-indigo-500"
+                    : "bg-white/10 hover:bg-white/15"
+                }`}
+              >
+                Get Started
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
 }

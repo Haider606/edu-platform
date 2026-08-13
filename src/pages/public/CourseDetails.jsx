@@ -1,167 +1,264 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { useParams } from 'react-router-dom'
-import { Star, Clock, Users, BookOpen, Check, Play, Award, MessageCircle, ArrowLeft } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { GlassCard } from '../../components/ui/GlassCard'
-import { GlowButton } from '../../components/ui/GlowButton'
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  PlayCircle,
+  Star,
+  Users,
+} from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 
 const courseData = {
-  1: {
-    title: 'AI & Machine Learning Fundamentals',
-    instructor: 'Dr. Sarah Chen',
-    rating: 4.9,
-    students: 3420,
-    duration: '12 weeks',
-    price: '$199',
-    originalPrice: '$399',
-    image: 'bg-gradient-to-br from-violet-600/30 to-purple-600/30',
-    tags: ['AI', 'Python', 'TensorFlow'],
-    description: 'Master the fundamentals of artificial intelligence and machine learning. From neural networks to deep learning, this comprehensive course takes you from zero to building real AI applications.',
-    modules: [
-      'Introduction to AI & ML',
-      'Python for Data Science',
-      'Supervised Learning',
-      'Unsupervised Learning',
-      'Neural Networks & Deep Learning',
-      'Computer Vision',
-      'Natural Language Processing',
-      'Deploying ML Models',
-      'Capstone Project',
-    ],
-    whatYouLearn: [
-      'Build and train neural networks from scratch',
-      'Implement CNNs and RNNs for real-world tasks',
-      'Deploy ML models to production environments',
-      'Understand transformer architectures',
-      'Fine-tune large language models',
+  "full-stack-bootcamp": {
+    title: "Full-Stack Web Development Bootcamp",
+    category: "Web Development",
+    instructor: "Alex Morgan",
+    rating: "4.9",
+    students: "2,400",
+    duration: "12 weeks",
+    price: "$49",
+    description:
+      "Learn modern frontend and backend development by building production-style applications from start to finish.",
+    lessons: [
+      "HTML, CSS and modern JavaScript",
+      "React and component architecture",
+      "APIs and backend fundamentals",
+      "Databases and authentication",
+      "Deployment and production workflows",
     ],
   },
-}
+
+  "machine-learning-a-z": {
+    title: "Machine Learning A-Z",
+    category: "AI & Machine Learning",
+    instructor: "Dr. Sarah Khan",
+    rating: "4.8",
+    students: "1,800",
+    duration: "14 weeks",
+    price: "$59",
+    description:
+      "Build a strong understanding of machine learning concepts and apply them to practical problems.",
+    lessons: [
+      "Python for machine learning",
+      "Data preparation",
+      "Supervised learning",
+      "Model evaluation",
+      "Practical machine learning projects",
+    ],
+  },
+};
+
+const defaultCourse = {
+  title: "Professional Skills Masterclass",
+  category: "Professional Development",
+  instructor: "EduVerse Instructor",
+  rating: "4.8",
+  students: "1,000+",
+  duration: "10 weeks",
+  price: "$49",
+  description:
+    "Develop practical skills through structured lessons, exercises and project-based learning.",
+  lessons: [
+    "Core concepts and foundations",
+    "Practical exercises",
+    "Real-world workflows",
+    "Portfolio project",
+    "Career preparation",
+  ],
+};
 
 export default function CourseDetails() {
-  const { id } = useParams()
-  const course = courseData[id] || courseData[1]
-  const [activeTab, setActiveTab] = useState('overview')
+  const { id } = useParams();
+
+  const course = courseData[id] || defaultCourse;
 
   return (
-    <div className="relative pt-24 pb-20">
-      <div className="absolute inset-0 bg-gradient-to-b from-bg via-bg-secondary to-bg" />
-      <div className="relative z-10 max-w-7xl mx-auto px-6">
-        <Link to="/courses" className="inline-flex items-center gap-2 text-text-muted hover:text-white transition-colors mb-8">
-          <ArrowLeft className="w-4 h-4" /> Back to Courses
-        </Link>
+    <main className="min-h-screen bg-[#050508] text-white">
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-white/10 pt-28">
+        <div className="absolute right-0 top-0 h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-[120px]" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-5 pb-20 sm:px-8 lg:grid-cols-[1.4fr_.6fr] lg:items-center lg:pb-28">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <span className="rounded-full border border-indigo-400/20 bg-indigo-400/10 px-4 py-2 text-sm text-indigo-300">
+              {course.category}
+            </span>
+
+            <h1 className="mt-7 text-4xl font-bold tracking-tight sm:text-6xl">
+              {course.title}
+            </h1>
+
+            <p className="mt-6 max-w-2xl text-base leading-8 text-slate-400 sm:text-lg">
+              {course.description}
+            </p>
+
+            <div className="mt-7 flex flex-wrap gap-5 text-sm text-slate-400">
+              <span className="flex items-center gap-2">
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                {course.rating}
+              </span>
+
+              <span className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                {course.students} students
+              </span>
+
+              <span className="flex items-center gap-2">
+                <Clock3 className="h-4 w-4" />
+                {course.duration}
+              </span>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="rounded-3xl border border-white/10 bg-white/[0.04] p-6"
+          >
+            <div className="flex h-48 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600/30 to-cyan-500/10">
+              <PlayCircle className="h-16 w-16 text-white/80" />
+            </div>
+
+            <div className="mt-6 flex items-end justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Course price</p>
+                <p className="mt-1 text-4xl font-bold">{course.price}</p>
+              </div>
+            </div>
+
+            <Link
+              to="/admission"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 font-semibold transition hover:bg-indigo-500"
             >
-              <div className={`h-64 md:h-80 rounded-2xl ${course.image} flex items-center justify-center mb-8 relative overflow-hidden`}>
-                <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
-                <div className="relative z-10 text-center">
-                  <div className="w-20 h-20 mx-auto rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center mb-4">
-                    <BookOpen className="w-10 h-10 text-white" />
-                  </div>
-                  <div className="flex gap-2 justify-center">
-                    {course.tags.map(tag => (
-                      <span key={tag} className="px-3 py-1 rounded-full bg-black/40 backdrop-blur text-sm font-medium">{tag}</span>
-                    ))}
-                  </div>
+              Enroll Now
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Content */}
+      <section className="mx-auto grid max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1.5fr_.5fr]">
+        <div>
+          <h2 className="text-3xl font-bold">Course overview</h2>
+
+          <p className="mt-5 leading-8 text-slate-400">
+            This course combines structured learning with practical exercises
+            so you can turn concepts into useful skills.
+          </p>
+
+          <h2 className="mt-14 text-3xl font-bold">What you'll learn</h2>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {course.lessons.map((lesson) => (
+              <div
+                key={lesson}
+                className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+              >
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
+                <span className="text-sm text-slate-300">{lesson}</span>
+              </div>
+            ))}
+          </div>
+
+          <h2 className="mt-14 text-3xl font-bold">Curriculum</h2>
+
+          <div className="mt-6 space-y-3">
+            {course.lessons.map((lesson, index) => (
+              <div
+                key={lesson}
+                className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-sm font-bold text-indigo-300">
+                  {index + 1}
+                </span>
+
+                <div>
+                  <p className="font-semibold">{lesson}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Practical learning module
+                  </p>
                 </div>
               </div>
-
-              <h1 className="text-3xl md:text-4xl font-display font-bold mb-4">{course.title}</h1>
-              <p className="text-text-secondary leading-relaxed mb-6">{course.description}</p>
-
-              <div className="flex flex-wrap items-center gap-6 mb-8 text-sm text-text-secondary">
-                <span className="flex items-center gap-2"><Star className="w-5 h-5 text-amber-400 fill-amber-400" />{course.rating} Rating</span>
-                <span className="flex items-center gap-2"><Users className="w-5 h-5" />{course.students.toLocaleString()} Students</span>
-                <span className="flex items-center gap-2"><Clock className="w-5 h-5" />{course.duration}</span>
-                <span className="flex items-center gap-2"><Award className="w-5 h-5 text-primary-light" />Certificate</span>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex gap-2 mb-6 border-b border-white/5">
-                {['overview', 'curriculum', 'reviews'].map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-3 text-sm font-medium capitalize transition-colors border-b-2 ${
-                      activeTab === tab ? 'text-white border-primary' : 'text-text-muted border-transparent hover:text-white'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-
-              {activeTab === 'overview' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <h3 className="text-xl font-display font-bold mb-4">What You Will Learn</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
-                    {course.whatYouLearn.map((item, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 rounded-xl glass">
-                        <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-text-secondary">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === 'curriculum' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-                  {course.modules.map((module, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 rounded-xl glass hover:bg-white/[0.04] transition-colors cursor-pointer group">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm group-hover:bg-primary group-hover:text-white transition-colors">
-                        {i + 1}
-                      </div>
-                      <span className="flex-1 font-medium">{module}</span>
-                      <Play className="w-4 h-4 text-text-muted group-hover:text-white transition-colors" />
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-
-              {activeTab === 'reviews' && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div className="text-center py-12">
-                    <MessageCircle className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                    <p className="text-text-secondary">Reviews coming soon</p>
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-28">
-              <GlassCard glow className="mb-6">
-                <div className="text-3xl font-display font-bold text-white mb-1">{course.price}</div>
-                <div className="text-text-muted line-through mb-6">{course.originalPrice}</div>
-                <GlowButton variant="primary" className="w-full mb-3">Enroll Now</GlowButton>
-                <GlowButton variant="secondary" className="w-full">Add to Wishlist</GlowButton>
-                <p className="text-xs text-text-muted text-center mt-4">14-day money-back guarantee</p>
-              </GlassCard>
-
-              <GlassCard>
-                <h4 className="font-display font-bold mb-4">This Course Includes</h4>
-                <ul className="space-y-3 text-sm text-text-secondary">
-                  <li className="flex items-center gap-2"><Play className="w-4 h-4 text-primary" /> 48 hours on-demand video</li>
-                  <li className="flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> 12 downloadable resources</li>
-                  <li className="flex items-center gap-2"><MessageCircle className="w-4 h-4 text-primary" /> Direct mentor access</li>
-                  <li className="flex items-center gap-2"><Award className="w-4 h-4 text-primary" /> Certificate of completion</li>
-                  <li className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Lifetime community access</li>
-                </ul>
-              </GlassCard>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
-    </div>
-  )
+
+        <aside>
+          <div className="sticky top-28 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
+            <h3 className="text-lg font-bold">Your instructor</h3>
+
+            <div className="mt-5 flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 font-bold">
+                {course.instructor
+                  .split(" ")
+                  .map((word) => word[0])
+                  .join("")
+                  .slice(0, 2)}
+              </div>
+
+              <div>
+                <p className="font-semibold">{course.instructor}</p>
+                <p className="text-sm text-slate-500">
+                  Industry instructor
+                </p>
+              </div>
+            </div>
+
+            <div className="my-6 h-px bg-white/10" />
+
+            <h3 className="font-bold">Requirements</h3>
+
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              Basic computer skills and a willingness to practice. Specific
+              prerequisites may vary by course level.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      {/* Reviews */}
+      <section className="border-t border-white/10 px-5 py-20 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <h2 className="text-3xl font-bold">Student reviews</h2>
+
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            {[
+              "The project-based structure made the concepts much easier to understand.",
+              "I liked the balance between lessons and practical exercises.",
+              "The course gave me a much clearer direction for my learning journey.",
+            ].map((review, index) => (
+              <div
+                key={index}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-6"
+              >
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className="h-4 w-4 fill-yellow-400 text-yellow-400"
+                    />
+                  ))}
+                </div>
+
+                <p className="mt-5 text-sm leading-7 text-slate-400">
+                  "{review}"
+                </p>
+
+                <p className="mt-5 text-sm font-semibold text-white">
+                  Student {index + 1}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }

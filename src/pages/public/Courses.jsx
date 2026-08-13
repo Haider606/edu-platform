@@ -1,122 +1,285 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
-import { Search, Filter, Star, Clock, Users, BookOpen, ArrowRight, SlidersHorizontal } from 'lucide-react'
-import { GlassCard } from '../../components/ui/GlassCard'
-import { SectionTitle } from '../../components/ui/SectionTitle'
+import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  BookOpen,
+  Clock3,
+  Search,
+  Star,
+  Users,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 
-const allCourses = [
-  { id: 1, title: 'AI & Machine Learning Fundamentals', instructor: 'Dr. Sarah Chen', rating: 4.9, students: 3420, duration: '12 weeks', price: '$199', originalPrice: '$399', image: 'bg-gradient-to-br from-violet-600/20 to-purple-600/20', tags: ['AI', 'Python', 'TensorFlow'], category: 'AI & Data' },
-  { id: 2, title: 'Full-Stack Web Development', instructor: 'James Wilson', rating: 4.8, students: 5180, duration: '16 weeks', price: '$249', originalPrice: '$499', image: 'bg-gradient-to-br from-blue-600/20 to-cyan-600/20', tags: ['React', 'Node.js', 'MongoDB'], category: 'Web Dev' },
-  { id: 3, title: 'Data Science & Analytics', instructor: 'Prof. Maria Garcia', rating: 4.9, students: 2890, duration: '14 weeks', price: '$229', originalPrice: '$459', image: 'bg-gradient-to-br from-emerald-600/20 to-teal-600/20', tags: ['Python', 'SQL', 'Tableau'], category: 'AI & Data' },
-  { id: 4, title: 'Cloud Architecture & DevOps', instructor: 'Alex Kumar', rating: 4.7, students: 2150, duration: '10 weeks', price: '$179', originalPrice: '$359', image: 'bg-gradient-to-br from-amber-600/20 to-orange-600/20', tags: ['AWS', 'Docker', 'K8s'], category: 'Cloud' },
-  { id: 5, title: 'Cybersecurity Essentials', instructor: 'Lisa Thompson', rating: 4.8, students: 1890, duration: '8 weeks', price: '$159', originalPrice: '$319', image: 'bg-gradient-to-br from-rose-600/20 to-pink-600/20', tags: ['Security', 'Network', 'Ethical Hacking'], category: 'Security' },
-  { id: 6, title: 'Mobile App Development', instructor: 'David Park', rating: 4.6, students: 2760, duration: '12 weeks', price: '$189', originalPrice: '$379', image: 'bg-gradient-to-br from-indigo-600/20 to-blue-600/20', tags: ['React Native', 'iOS', 'Android'], category: 'Mobile' },
-  { id: 7, title: 'Blockchain & Web3 Development', instructor: 'Ryan Nakamura', rating: 4.7, students: 1450, duration: '10 weeks', price: '$199', originalPrice: '$399', image: 'bg-gradient-to-br from-cyan-600/20 to-blue-600/20', tags: ['Solidity', 'Ethereum', 'Smart Contracts'], category: 'Web3' },
-  { id: 8, title: 'UI/UX Design Masterclass', instructor: 'Emma Laurent', rating: 4.8, students: 3120, duration: '8 weeks', price: '$149', originalPrice: '$299', image: 'bg-gradient-to-br from-pink-600/20 to-rose-600/20', tags: ['Figma', 'Design Systems', 'Prototyping'], category: 'Design' },
-]
+const courses = [
+  {
+    id: "full-stack-bootcamp",
+    category: "Web Development",
+    level: "Beginner",
+    price: 49,
+    rating: 4.9,
+    students: 2400,
+    duration: "12 weeks",
+    title: "Full-Stack Web Development Bootcamp",
+    instructor: "Alex Morgan",
+    description:
+      "Learn modern frontend and backend development by building production-style applications.",
+  },
+  {
+    id: "machine-learning-a-z",
+    category: "AI & Machine Learning",
+    level: "Intermediate",
+    price: 59,
+    rating: 4.8,
+    students: 1800,
+    duration: "14 weeks",
+    title: "Machine Learning A-Z",
+    instructor: "Dr. Sarah Khan",
+    description:
+      "Understand machine learning fundamentals and build practical predictive models.",
+  },
+  {
+    id: "ui-ux-masterclass",
+    category: "UI/UX Design",
+    level: "Beginner",
+    price: 39,
+    rating: 4.9,
+    students: 1300,
+    duration: "8 weeks",
+    title: "UI/UX Design Masterclass",
+    instructor: "Emma Wilson",
+    description:
+      "Design user-centered digital experiences from research to polished interfaces.",
+  },
+  {
+    id: "digital-marketing",
+    category: "Digital Marketing",
+    level: "Beginner",
+    price: 35,
+    rating: 4.7,
+    students: 2100,
+    duration: "7 weeks",
+    title: "Digital Marketing Strategy",
+    instructor: "Daniel Lee",
+    description:
+      "Learn SEO, content strategy, social media and performance marketing.",
+  },
+  {
+    id: "cloud-architecture",
+    category: "Cloud Computing",
+    level: "Advanced",
+    price: 69,
+    rating: 4.8,
+    students: 920,
+    duration: "10 weeks",
+    title: "Cloud Architecture",
+    instructor: "Michael Chen",
+    description:
+      "Learn how to design scalable and reliable cloud infrastructure.",
+  },
+  {
+    id: "cybersecurity-fundamentals",
+    category: "Cyber Security",
+    level: "Intermediate",
+    price: 55,
+    rating: 4.8,
+    students: 1500,
+    duration: "9 weeks",
+    title: "Cybersecurity Fundamentals",
+    instructor: "James Carter",
+    description:
+      "Build a strong foundation in security principles, threats and defense.",
+  },
+];
 
-const categories = ['All', 'AI & Data', 'Web Dev', 'Cloud', 'Security', 'Mobile', 'Web3', 'Design']
+const categories = [
+  "All",
+  "Web Development",
+  "AI & Machine Learning",
+  "UI/UX Design",
+  "Digital Marketing",
+  "Cloud Computing",
+  "Cyber Security",
+];
 
 export default function Courses() {
-  const [activeCategory, setActiveCategory] = useState('All')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [level, setLevel] = useState("All");
 
-  const filtered = allCourses.filter(c => {
-    const matchCat = activeCategory === 'All' || c.category === activeCategory
-    const matchSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || c.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
-    return matchCat && matchSearch
-  })
+  const filteredCourses = useMemo(() => {
+    return courses.filter((course) => {
+      const matchesSearch =
+        course.title.toLowerCase().includes(search.toLowerCase()) ||
+        course.description.toLowerCase().includes(search.toLowerCase());
+
+      const matchesCategory =
+        category === "All" || course.category === category;
+
+      const matchesLevel = level === "All" || course.level === level;
+
+      return matchesSearch && matchesCategory && matchesLevel;
+    });
+  }, [search, category, level]);
 
   return (
-    <div className="relative">
-      <section className="pt-32 pb-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-bg via-bg-secondary to-bg" />
-        <div className="relative z-10 max-w-7xl mx-auto px-6">
-          <SectionTitle
-            label="Courses"
-            title="Explore Our Curriculum"
-            description="Industry-vetted courses designed to take you from beginner to job-ready"
-          />
+    <main className="min-h-screen bg-[#050508] px-5 pb-24 pt-32 text-white sm:px-8">
+      <div className="mx-auto max-w-7xl">
+        <section className="text-center">
+          <motion.span
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex rounded-full border border-indigo-400/20 bg-indigo-400/10 px-4 py-2 text-sm text-indigo-300"
+          >
+            Explore the library
+          </motion.span>
 
-          {/* Search & Filter */}
-          <div className="flex flex-col md:flex-row gap-4 mb-12 max-w-4xl mx-auto">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mx-auto mt-6 max-w-4xl text-4xl font-bold sm:text-6xl"
+          >
+            Learn skills that move your{" "}
+            <span className="text-gradient">career forward.</span>
+          </motion.h1>
+
+          <p className="mx-auto mt-5 max-w-2xl leading-7 text-slate-400">
+            Practical courses created around real skills, projects and
+            professional outcomes.
+          </p>
+        </section>
+
+        {/* Search */}
+        <section className="mt-12 rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+
               <input
-                type="text"
-                placeholder="Search courses, topics, or skills..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-xl glass text-white placeholder:text-text-muted focus:outline-none focus:border-primary/50 transition-colors"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search courses..."
+                className="w-full rounded-xl border border-white/10 bg-black/20 py-3.5 pl-12 pr-4 text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-500"
               />
             </div>
-            <button className="flex items-center gap-2 px-6 py-4 rounded-xl glass hover:bg-white/5 transition-colors text-text-secondary">
-              <SlidersHorizontal className="w-5 h-5" />
-              <span>Filters</span>
-            </button>
+
+            <select
+              value={level}
+              onChange={(event) => setLevel(event.target.value)}
+              className="rounded-xl border border-white/10 bg-[#0b0b12] px-4 py-3.5 text-sm text-white outline-none focus:border-indigo-500"
+            >
+              <option value="All">All levels</option>
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+            </select>
           </div>
 
-          {/* Categories */}
-          <div className="flex flex-wrap justify-center gap-2 mb-12">
-            {categories.map(cat => (
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {categories.map((item) => (
               <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  activeCategory === cat
-                    ? 'bg-primary text-white shadow-glow'
-                    : 'glass text-text-secondary hover:text-white hover:bg-white/5'
+                key={item}
+                onClick={() => setCategory(item)}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition ${
+                  category === item
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                {cat}
+                {item}
               </button>
             ))}
           </div>
+        </section>
 
-          {/* Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filtered.map((course, i) => (
-              <motion.div
-                key={course.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <Link to={`/courses/${course.id}`}>
-                  <GlassCard glow className="h-full group overflow-hidden">
-                    <div className={`h-40 rounded-xl mb-4 ${course.image} flex items-center justify-center relative overflow-hidden`}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-bg/80 to-transparent" />
-                      <BookOpen className="w-10 h-10 text-white/60 relative z-10 group-hover:scale-110 transition-transform" />
-                      <div className="absolute top-3 right-3 flex gap-1">
-                        {course.tags.slice(0, 2).map(tag => (
-                          <span key={tag} className="px-2 py-1 rounded-md bg-black/40 backdrop-blur text-[10px] font-medium text-white/80">{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <h3 className="font-display font-bold mb-2 group-hover:text-primary-light transition-colors">{course.title}</h3>
-                    <p className="text-sm text-text-muted mb-3">by {course.instructor}</p>
-                    <div className="flex items-center gap-3 text-sm text-text-secondary mb-4">
-                      <span className="flex items-center gap-1"><Star className="w-4 h-4 text-amber-400 fill-amber-400" />{course.rating}</span>
-                      <span className="flex items-center gap-1"><Users className="w-4 h-4" />{course.students.toLocaleString()}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{course.duration}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl font-bold text-white">{course.price}</span>
-                        <span className="text-sm text-text-muted line-through">{course.originalPrice}</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </GlassCard>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+        {/* Results */}
+        <div className="mt-10 flex items-center justify-between">
+          <p className="text-sm text-slate-500">
+            Showing{" "}
+            <span className="text-slate-300">{filteredCourses.length}</span>{" "}
+            courses
+          </p>
         </div>
-      </section>
-    </div>
-  )
+
+        <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredCourses.map((course, index) => (
+            <motion.article
+              key={course.id}
+              initial={{ opacity: 0, y: 25 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ y: -6 }}
+              className="group overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]"
+            >
+              <div className="relative h-48 overflow-hidden bg-gradient-to-br from-indigo-600/30 via-purple-600/20 to-cyan-500/10">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,.12),transparent_30%)]" />
+
+                <div className="absolute bottom-5 left-5 flex h-12 w-12 items-center justify-center rounded-xl bg-black/30 backdrop-blur">
+                  <BookOpen className="h-6 w-6 text-indigo-300" />
+                </div>
+
+                <span className="absolute right-4 top-4 rounded-full bg-black/40 px-3 py-1 text-xs text-white backdrop-blur">
+                  {course.category}
+                </span>
+              </div>
+
+              <div className="p-6">
+                <h2 className="text-xl font-bold leading-7 text-white">
+                  {course.title}
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-slate-400">
+                  {course.description}
+                </p>
+
+                <p className="mt-4 text-sm text-slate-500">
+                  By{" "}
+                  <span className="text-slate-300">{course.instructor}</span>
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    {course.rating}
+                  </span>
+
+                  <span className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    {course.students.toLocaleString()}
+                  </span>
+
+                  <span className="flex items-center gap-1">
+                    <Clock3 className="h-4 w-4" />
+                    {course.duration}
+                  </span>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
+                  <span className="text-2xl font-bold">${course.price}</span>
+
+                  <Link
+                    to={`/courses/${course.id}`}
+                    className="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold transition hover:bg-indigo-600"
+                  >
+                    View Course
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+
+        {filteredCourses.length === 0 && (
+          <div className="py-20 text-center">
+            <p className="text-lg font-semibold">No courses found.</p>
+            <p className="mt-2 text-sm text-slate-500">
+              Try changing your search or filters.
+            </p>
+          </div>
+        )}
+      </div>
+    </main>
+  );
 }
