@@ -1,24 +1,30 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
+// Layouts
 import PublicLayout from "../layouts/PublicLayout";
 import StudentLayout from "../layouts/StudentLayout";
+import TeacherLayout from "../layouts/TeacherLayout";
+import ManagerLayout from "../layouts/ManagerLayout";
+import AdminLayout from "../layouts/AdminLayout";
 
-// Public pages
+// Authentication
+import ProtectedRoute from "../components/auth/ProtectedRoute";
+
+// Public Pages
 import Home from "../pages/public/Home";
 import About from "../pages/public/About";
 import Courses from "../pages/public/Courses";
 import CourseDetails from "../pages/public/CourseDetails";
 import Pricing from "../pages/public/Pricing";
 import Admission from "../pages/public/Admission";
+import Internship from "../pages/public/Internship";
 import FAQ from "../pages/public/FAQ";
 import Contact from "../pages/public/Contact";
 import Login from "../pages/public/Login";
 import Register from "../pages/public/Register";
+import AccessDenied from "../pages/public/AccessDenied";
 
-// Internship page
-import Internship from "../pages/public/Internship";
-
-// Student pages
+// Student Pages
 import StudentDashboard from "../pages/student/Dashboard";
 import MyCourses from "../pages/student/MyCourses";
 import CourseDetailsStudent from "../pages/student/CourseDetails";
@@ -48,6 +54,15 @@ import Profile from "../pages/student/Profile";
 import Settings from "../pages/student/Settings";
 import Applications from "../pages/student/Applications";
 
+// Teacher
+import TeacherDashboard from "../pages/teacher/Dashboard";
+
+// Manager
+import ManagerDashboard from "../pages/manager/Dashboard";
+
+// Admin
+import AdminDashboard from "../pages/admin/Dashboard";
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -64,15 +79,22 @@ export default function AppRoutes() {
 
         <Route path="/courses" element={<Courses />} />
 
-        <Route path="/courses/:id" element={<CourseDetails />} />
+        <Route
+          path="/courses/:id"
+          element={<CourseDetails />}
+        />
 
         <Route path="/pricing" element={<Pricing />} />
 
-        {/* Admission = application/enrollment page */}
-        <Route path="/admission" element={<Admission />} />
+        <Route
+          path="/admission"
+          element={<Admission />}
+        />
 
-        {/* Internship = separate internship discovery page */}
-        <Route path="/internships" element={<Internship />} />
+        <Route
+          path="/internships"
+          element={<Internship />}
+        />
 
         <Route path="/faq" element={<FAQ />} />
 
@@ -86,10 +108,28 @@ export default function AppRoutes() {
 
 
       {/* =====================================================
-          STUDENT PORTAL
+          ACCESS DENIED
       ====================================================== */}
 
-      <Route path="/student" element={<StudentLayout />}>
+      <Route
+        path="/access-denied"
+        element={<AccessDenied />}
+      />
+
+
+      {/* =====================================================
+          STUDENT PORTAL
+          Only Student role can access
+      ====================================================== */}
+
+      <Route
+        path="/student"
+        element={
+          <ProtectedRoute allowedRoles={["Student"]}>
+            <StudentLayout />
+          </ProtectedRoute>
+        }
+      >
 
         <Route
           index
@@ -234,6 +274,87 @@ export default function AppRoutes() {
         <Route
           path="help"
           element={<Help />}
+        />
+
+      </Route>
+
+
+      {/* =====================================================
+          TEACHER PORTAL
+          Only Teacher role can access
+      ====================================================== */}
+
+      <Route
+        path="/teacher"
+        element={
+          <ProtectedRoute allowedRoles={["Teacher"]}>
+            <TeacherLayout />
+          </ProtectedRoute>
+        }
+      >
+
+        <Route
+          index
+          element={<Navigate to="dashboard" replace />}
+        />
+
+        <Route
+          path="dashboard"
+          element={<TeacherDashboard />}
+        />
+
+      </Route>
+
+
+      {/* =====================================================
+          MANAGER PORTAL
+          Only Manager role can access
+      ====================================================== */}
+
+      <Route
+        path="/manager"
+        element={
+          <ProtectedRoute allowedRoles={["Manager"]}>
+            <ManagerLayout />
+          </ProtectedRoute>
+        }
+      >
+
+        <Route
+          index
+          element={<Navigate to="dashboard" replace />}
+        />
+
+        <Route
+          path="dashboard"
+          element={<ManagerDashboard />}
+        />
+
+      </Route>
+
+
+      {/* =====================================================
+          ADMIN PORTAL
+          Only Admin role can access
+      ====================================================== */}
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["Admin"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+
+        <Route
+          index
+          element={<Navigate to="dashboard" replace />}
+        />
+
+        <Route
+          path="dashboard"
+          element={<AdminDashboard />}
         />
 
       </Route>
