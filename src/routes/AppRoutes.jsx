@@ -140,14 +140,13 @@ export default function AppRoutes() {
           path="dashboard"
           element={<StudentDashboard />}
         />
-
         <Route
-          path="my-courses"
+          path="courses"
           element={<MyCourses />}
         />
 
         <Route
-          path="course-details"
+          path="courses/:id"
           element={<CourseDetailsStudent />}
         />
 
@@ -165,9 +164,8 @@ export default function AppRoutes() {
           path="assignments"
           element={<Assignments />}
         />
-
         <Route
-          path="assignment-details"
+          path="assignments/:id"
           element={<AssignmentDetails />}
         />
 

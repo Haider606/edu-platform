@@ -44,7 +44,7 @@ const sections = [
     items: [
       {
         label: "My Courses",
-        path: "/student/my-courses",
+        path: "/student/courses",
         icon: BookOpen,
       },
       {

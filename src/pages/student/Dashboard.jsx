@@ -174,7 +174,7 @@ export default function Dashboard() {
         </div>
 
         <Link
-          to="/student/my-courses"
+          to="/student/courses"
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
         >
           View my courses
