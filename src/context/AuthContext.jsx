@@ -45,7 +45,17 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  /*
+   * ============================================================
+   * LOAD PROFILE + ROLE
+   * ============================================================
+   */
   const loadProfileAndRole = useCallback(async (currentUser) => {
+    console.log(
+      "AUTH FUNCTION STARTED",
+      currentUser?.id
+    );
+
     if (!currentUser) {
       setProfile(null);
       setRole(null);
@@ -53,108 +63,187 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      console.log("AUTH TRY STARTED");
+
       /*
-       * ----------------------------------------------------
-       * Load profile
-       * ----------------------------------------------------
-       *
-       * We use select("*") because we do not want to assume
-       * columns that may not exist in your current table.
+       * ========================================================
+       * STEP 1 — LOAD PROFILE
+       * ========================================================
        */
-      const { data: profileData, error: profileError } =
-        await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", currentUser.id)
-          .maybeSingle();
+
+      console.log("AUTH STEP 1: loading profile");
+
+      const {
+        data: profileData,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+
+      console.log("AUTH STEP 1 RESULT:", {
+        profileData,
+        profileError,
+      });
 
       if (profileError) {
-        console.error("Profile loading error:", profileError);
+        console.error(
+          "PROFILE ERROR:",
+          profileError
+        );
+
         setProfile(null);
         setRole(null);
+
         return;
       }
 
       setProfile(profileData || null);
 
       /*
-       * ----------------------------------------------------
-       * Load user role
-       * ----------------------------------------------------
-       *
-       * Expected relationship:
-       *
-       * user_roles.user_id -> profiles.id
-       * user_roles.role_id -> roles.id
-       *
-       * We intentionally query user_roles first and then
-       * roles separately instead of assuming a Supabase
-       * relationship name.
+       * ========================================================
+       * STEP 2 — LOAD USER ROLE
+       * ========================================================
        */
-      const { data: userRoleData, error: userRoleError } =
-        await supabase
-          .from("user_roles")
-          .select("role_id")
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
+
+      console.log(
+        "AUTH STEP 2: loading user role"
+      );
+
+      const {
+        data: userRoleData,
+        error: userRoleError,
+      } = await supabase
+        .from("user_roles")
+        .select("role_id")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+      console.log("AUTH STEP 2 RESULT:", {
+        userRoleData,
+        userRoleError,
+      });
 
       if (userRoleError) {
-        console.error("User role loading error:", userRoleError);
-        setRole(null);
-        return;
-      }
+        console.error(
+          "USER ROLE ERROR:",
+          userRoleError
+        );
 
-      if (!userRoleData?.role_id) {
         setRole(null);
-        return;
-      }
 
-      const { data: roleData, error: roleError } =
-        await supabase
-          .from("roles")
-          .select("*")
-          .eq("id", userRoleData.role_id)
-          .maybeSingle();
-
-      if (roleError) {
-        console.error("Role loading error:", roleError);
-        setRole(null);
         return;
       }
 
       /*
-       * Different projects sometimes call the column:
-       *
-       * name
-       * role_name
-       *
-       * We support both without changing the database.
+       * No role assigned
        */
+      if (!userRoleData?.role_id) {
+        console.warn(
+          "AUTH WARNING: No role assigned to user."
+        );
+
+        setRole(null);
+
+        return;
+      }
+
+      /*
+       * ========================================================
+       * STEP 3 — LOAD ROLE
+       * ========================================================
+       */
+
+      console.log(
+        "AUTH STEP 3: loading role"
+      );
+
+      const {
+        data: roleData,
+        error: roleError,
+      } = await supabase
+        .from("roles")
+        .select("*")
+        .eq("id", userRoleData.role_id)
+        .maybeSingle();
+
+      console.log("AUTH STEP 3 RESULT:", {
+        roleData,
+        roleError,
+      });
+
+      if (roleError) {
+        console.error(
+          "ROLE ERROR:",
+          roleError
+        );
+
+        setRole(null);
+
+        return;
+      }
+
+      /*
+       * Role record does not exist
+       */
+      if (!roleData) {
+        console.warn(
+          "AUTH WARNING: Role record not found."
+        );
+
+        setRole(null);
+
+        return;
+      }
+
+      /*
+       * ========================================================
+       * NORMALIZE ROLE
+       * ========================================================
+       */
+
       const rawRoleName =
         roleData?.name ??
         roleData?.role_name ??
         null;
 
-      const normalizedRole = normalizeRole(rawRoleName);
+      const normalizedRole =
+        normalizeRole(rawRoleName);
 
-console.log("AUTH DEBUG:", {
-  userId: currentUser.id,
-  profile: profileData,
-  userRole: userRoleData,
-  roleData,
-  rawRoleName,
-  normalizedRole,
-});
+      console.log("AUTH DEBUG:", {
+        userId: currentUser.id,
+        profile: profileData,
+        userRole: userRoleData,
+        roleData,
+        rawRoleName,
+        normalizedRole,
+      });
 
-setRole(normalizedRole);
-setProfile(profileData || null);
+      /*
+       * ========================================================
+       * SAVE AUTH DATA
+       * ========================================================
+       */
+
+      setProfile(profileData || null);
+      setRole(normalizedRole);
     } catch (error) {
-      console.error("Authentication data loading error:", error);
+      console.error(
+        "Authentication data loading error:",
+        error
+      );
 
       setProfile(null);
       setRole(null);
     }
   }, []);
+
+  /*
+   * ============================================================
+   * REFRESH USER
+   * ============================================================
+   */
 
   const refreshUser = useCallback(async () => {
     setLoading(true);
@@ -166,7 +255,10 @@ setProfile(profileData || null);
       } = await supabase.auth.getSession();
 
       if (error) {
-        console.error("Session loading error:", error);
+        console.error(
+          "Session loading error:",
+          error
+        );
 
         setSession(null);
         setUser(null);
@@ -176,7 +268,8 @@ setProfile(profileData || null);
         return;
       }
 
-      const currentUser = currentSession?.user ?? null;
+      const currentUser =
+        currentSession?.user ?? null;
 
       setSession(currentSession);
       setUser(currentUser);
@@ -188,7 +281,10 @@ setProfile(profileData || null);
         setRole(null);
       }
     } catch (error) {
-      console.error("Refresh user error:", error);
+      console.error(
+        "Refresh user error:",
+        error
+      );
 
       setSession(null);
       setUser(null);
@@ -198,6 +294,12 @@ setProfile(profileData || null);
       setLoading(false);
     }
   }, [loadProfileAndRole]);
+
+  /*
+   * ============================================================
+   * INITIAL AUTHENTICATION
+   * ============================================================
+   */
 
   useEffect(() => {
     let mounted = true;
@@ -210,7 +312,10 @@ setProfile(profileData || null);
         } = await supabase.auth.getSession();
 
         if (error) {
-          console.error("Initial session error:", error);
+          console.error(
+            "Initial session error:",
+            error
+          );
 
           if (mounted) {
             setSession(null);
@@ -227,13 +332,16 @@ setProfile(profileData || null);
           return;
         }
 
-        const currentUser = currentSession?.user ?? null;
+        const currentUser =
+          currentSession?.user ?? null;
 
         setSession(currentSession);
         setUser(currentUser);
 
         if (currentUser) {
-          await loadProfileAndRole(currentUser);
+          await loadProfileAndRole(
+            currentUser
+          );
         } else {
           setProfile(null);
           setRole(null);
@@ -243,7 +351,10 @@ setProfile(profileData || null);
           setLoading(false);
         }
       } catch (error) {
-        console.error("Authentication initialization error:", error);
+        console.error(
+          "Authentication initialization error:",
+          error
+        );
 
         if (mounted) {
           setSession(null);
@@ -258,15 +369,11 @@ setProfile(profileData || null);
     initializeAuth();
 
     /*
-     * Supabase handles:
-     *
-     * SIGNED_IN
-     * SIGNED_OUT
-     * TOKEN_REFRESHED
-     * USER_UPDATED
-     *
-     * We keep one listener for the whole application.
+     * ==========================================================
+     * SUPABASE AUTH STATE LISTENER
+     * ==========================================================
      */
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
@@ -278,28 +385,35 @@ setProfile(profileData || null);
         setSession(newSession ?? null);
         setUser(newSession?.user ?? null);
 
+        /*
+         * SIGNED OUT
+         */
         if (event === "SIGNED_OUT") {
           setProfile(null);
           setRole(null);
           setLoading(false);
+
           return;
         }
 
         /*
-         * Do not perform a large database operation directly
-         * inside the Supabase auth callback.
-         *
-         * Schedule it after the callback completes.
+         * New authenticated session
          */
         if (newSession?.user) {
           setLoading(true);
 
+          /*
+           * Run after Supabase auth callback
+           * completes.
+           */
           setTimeout(async () => {
             if (!mounted) {
               return;
             }
 
-            await loadProfileAndRole(newSession.user);
+            await loadProfileAndRole(
+              newSession.user
+            );
 
             if (mounted) {
               setLoading(false);
@@ -313,46 +427,82 @@ setProfile(profileData || null);
       }
     );
 
+    /*
+     * ==========================================================
+     * CLEANUP
+     * ==========================================================
+     */
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, [loadProfileAndRole]);
 
-  const signIn = useCallback(async (email, password) => {
-    const { data, error } =
-      await supabase.auth.signInWithPassword({
+  /*
+   * ============================================================
+   * SIGN IN
+   * ============================================================
+   */
+
+  const signIn = useCallback(
+    async (email, password) => {
+      const {
+        data,
+        error,
+      } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    return data;
-  }, []);
+      return data;
+    },
+    []
+  );
 
-  const signUp = useCallback(async (email, password, fullName) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+  /*
+   * ============================================================
+   * SIGN UP
+   * ============================================================
+   */
+
+  const signUp = useCallback(
+    async (email, password, fullName) => {
+      const {
+        data,
+        error,
+      } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    return data;
-  }, []);
+      return data;
+    },
+    []
+  );
+
+  /*
+   * ============================================================
+   * SIGN OUT
+   * ============================================================
+   */
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } =
+      await supabase.auth.signOut();
 
     if (error) {
       throw error;
@@ -364,9 +514,21 @@ setProfile(profileData || null);
     setRole(null);
   }, []);
 
+  /*
+   * ============================================================
+   * CURRENT USER
+   * ============================================================
+   */
+
   const getCurrentUser = useCallback(() => {
     return user;
   }, [user]);
+
+  /*
+   * ============================================================
+   * CONTEXT VALUE
+   * ============================================================
+   */
 
   const value = useMemo(
     () => ({
@@ -375,7 +537,10 @@ setProfile(profileData || null);
       profile,
       role,
       loading,
-      isAuthenticated: Boolean(user && session),
+
+      isAuthenticated: Boolean(
+        user && session
+      ),
 
       signIn,
       signUp,
@@ -384,7 +549,8 @@ setProfile(profileData || null);
       refreshUser,
       getCurrentUser,
 
-      dashboardPath: getDashboardPath(role),
+      dashboardPath:
+        getDashboardPath(role),
     }),
     [
       user,
@@ -400,12 +566,24 @@ setProfile(profileData || null);
     ]
   );
 
+  /*
+   * ============================================================
+   * PROVIDER
+   * ============================================================
+   */
+
   return (
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
+
+/*
+ * ==============================================================
+ * USE AUTH
+ * ==============================================================
+ */
 
 export function useAuth() {
   const context = useContext(AuthContext);

@@ -1,3 +1,4 @@
-export default function Dashboard() {
-  return <h1>Student Dashboard</h1>;
-}
+import { ShoppingBag, Search } from "lucide-react";
+import { useState } from "react";
+import { EmptyState, PageHeader, FilterBar, ConnectedNotice } from "../../components/student/StudentFeatureShell";
+export default function Marketplace(){const [search,setSearch]=useState("");return <div className="space-y-6"><PageHeader eyebrow="Marketplace" title="Marketplace" description="Explore eligible educational products and resources available through the platform."/><ConnectedNotice>Marketplace products are not queried or fabricated. Product catalog and checkout must be connected before items appear.</ConnectedNotice><FilterBar onSearch={setSearch} search={search} placeholder="Search marketplace..."/><EmptyState icon={ShoppingBag} title="Marketplace is empty" description={search?"No products match your search.":"Products will appear here when the marketplace catalog is connected."}/></div>}

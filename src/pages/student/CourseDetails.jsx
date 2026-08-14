@@ -1,195 +1,46 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  Circle,
-  Clock3,
-  Play,
-  UserRound,
-} from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, Circle, Play, UserRound } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-
-/*
- * The route parameter identifies a course only.
- *
- * Learning tables are not available in the current database, so this page
- * deliberately does not query Supabase and does not treat the parameter as
- * a student/user identifier.
- */
-const course = null;
-
-function CourseShell({ data }) {
-  const progress = Math.min(100, Math.max(0, Number(data.progress) || 0));
-  const completedLessons = Number(data.completedLessons) || 0;
-  const totalLessons = Number(data.totalLessons) || 0;
-  const remainingLessons = Math.max(totalLessons - completedLessons, 0);
-
-  return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="grid lg:grid-cols-[1.15fr_1fr]">
-          <div className="flex min-h-64 items-center justify-center bg-slate-100">
-            {data.thumbnail ? (
-              <img
-                src={data.thumbnail}
-                alt=""
-                className="h-full min-h-64 w-full object-cover"
-              />
-            ) : (
-              <BookOpen size={56} className="text-blue-600" strokeWidth={1.5} />
-            )}
-          </div>
-
-          <div className="p-6 sm:p-8">
-            <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700">
-              {data.status || "Course"}
-            </span>
-
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-              {data.title}
-            </h1>
-
-            <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
-              <UserRound size={16} />
-              {data.instructor || "Instructor"}
-            </div>
-
-            <p className="mt-5 text-sm leading-7 text-slate-500">
-              {data.description || "Course description will appear here when course content is available."}
-            </p>
-
-            <div className="mt-6">
-              <div className="mb-2 flex justify-between text-xs">
-                <span className="font-semibold text-slate-600">Progress</span>
-                <span className="font-bold text-slate-950">{progress}%</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.7 }}
-                  className="h-full rounded-full bg-blue-600"
-                />
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] text-slate-500">Completed</p>
-                <p className="mt-1 text-lg font-bold text-slate-950">{completedLessons}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] text-slate-500">Remaining</p>
-                <p className="mt-1 text-lg font-bold text-slate-950">{remainingLessons}</p>
-              </div>
-              <div className="col-span-2 rounded-xl bg-slate-50 p-3 sm:col-span-1">
-                <p className="text-[11px] text-slate-500">Last activity</p>
-                <p className="mt-1 truncate text-sm font-bold text-slate-950">
-                  {data.lastActivity || "No activity"}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              disabled={!data.continueUrl}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 sm:w-auto"
-            >
-              <Play size={16} />
-              Continue Learning
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-blue-600">Curriculum</p>
-          <h2 className="mt-1 text-lg font-bold text-slate-950">Course content</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Modules and lessons will appear here when course content is available.
-          </p>
-        </div>
-
-        <div className="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm">
-            <Circle size={20} />
-          </div>
-          <p className="mt-3 text-sm font-semibold text-slate-700">
-            Curriculum will appear here when course content is available.
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Modules, lessons, and completion states are ready to connect later.
-          </p>
-        </div>
-      </section>
-    </div>
-  );
-}
+import { getCourseDetails, updateLessonProgress } from "../../services/studentService";
+import { EmptyState, ErrorState, LoadingState, formatDate } from "../../components/student/StudentDataState";
 
 export default function CourseDetails() {
   const { id } = useParams();
-  const [loading] = useState(false);
-  const [error] = useState(null);
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [savingLesson, setSavingLesson] = useState(null);
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
-        <div className="h-80 animate-pulse rounded-2xl bg-white ring-1 ring-slate-200" />
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try { setCourse(await getCourseDetails(id)); } catch (err) { console.error(err); setError("We couldn't load this course right now."); }
+    finally { setLoading(false); }
+  }, [id]);
+  useEffect(() => { load(); }, [load]);
+
+  async function toggleLesson(lesson) {
+    try { setSavingLesson(lesson.id); await updateLessonProgress(lesson.id, !lesson.progress?.completed); await load(); }
+    catch (err) { console.error(err); setError("We couldn't update lesson progress."); }
+    finally { setSavingLesson(null); }
+  }
+
+  if (loading) return <LoadingState label="Loading course..." />;
+  if (error) return <ErrorState message={error} onRetry={load} />;
+  if (!course) return <div className="flex min-h-[60vh] items-center justify-center"><EmptyState title="Course not found" description="The course you're looking for is unavailable." icon={BookOpen} action={<Link to="/student/courses" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white"><ArrowLeft size={16} />Back to My Courses</Link>} /></div>;
+
+  const progress = Number(course.progress || 0);
+  const remaining = Math.max(course.totalLessons - course.completedLessons, 0);
+  return <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <Link to="/student/courses" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900"><ArrowLeft size={16} />Back to My Courses</Link>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="grid lg:grid-cols-[1.1fr_1fr]">
+        <div className="min-h-64 bg-slate-100">{course.thumbnail ? <img src={course.thumbnail} alt="" className="h-full min-h-64 w-full object-cover" /> : <div className="flex h-full min-h-64 items-center justify-center text-blue-600"><BookOpen size={58} /></div>}</div>
+        <div className="p-6 sm:p-8"><span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase text-blue-700">{course.enrollment.status}</span><h1 className="mt-4 text-2xl font-bold text-slate-950 sm:text-3xl">{course.title}</h1><p className="mt-2 flex items-center gap-2 text-sm text-slate-500"><UserRound size={15} />{course.instructor?.full_name || "Instructor"}</p><p className="mt-5 text-sm leading-7 text-slate-600">{course.description || "Course description will appear here."}</p><div className="mt-6"><div className="mb-2 flex justify-between text-xs"><span>Progress</span><strong>{progress}%</strong></div><div className="h-2.5 rounded-full bg-slate-100"><motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} className="h-full rounded-full bg-blue-600" /></div></div><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Completed lessons</p><p className="mt-1 font-bold">{course.completedLessons}</p></div><div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-500">Remaining lessons</p><p className="mt-1 font-bold">{remaining}</p></div></div></div>
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-2xl border border-red-100 bg-white p-10 text-center">
-        <h1 className="text-xl font-bold text-slate-950">Course couldn't be loaded</h1>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-          We couldn't load this course right now. Please try again later.
-        </p>
-      </div>
-    );
-  }
-
-  if (!course) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex min-h-[60vh] items-center justify-center"
-      >
-        <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center sm:p-10">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-            <BookOpen size={28} />
-          </div>
-
-          <p className="mt-5 text-xs font-bold uppercase tracking-wider text-blue-600">
-            Course {id ? "Unavailable" : "Details"}
-          </p>
-
-          <h1 className="mt-2 text-2xl font-bold text-slate-950">
-            Course not found
-          </h1>
-
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-            The course you're looking for is unavailable.
-          </p>
-
-          <Link
-            to="/student/courses"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            <ArrowLeft size={16} />
-            Back to My Courses
-          </Link>
-        </div>
-      </motion.div>
-    );
-  }
-
-  return <CourseShell data={course} />;
+    </section>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-blue-600">Curriculum</p><h2 className="mt-1 text-lg font-bold text-slate-950">Course content</h2></div><span className="text-xs text-slate-400">Updated {formatDate(course.enrollment.completed_at || course.enrollment.enrolled_at)}</span></div>
+      {course.course_modules.length ? <div className="mt-6 space-y-4">{course.course_modules.map((module, index) => <div key={module.id} className="rounded-2xl border border-slate-200"><div className="border-b border-slate-100 bg-slate-50 px-4 py-3"><p className="text-xs font-bold uppercase tracking-wider text-blue-600">Module {index + 1}</p><h3 className="mt-1 font-bold text-slate-900">{module.title}</h3>{module.description && <p className="mt-1 text-xs text-slate-500">{module.description}</p>}</div>{module.lessons.length ? <div className="divide-y divide-slate-100">{module.lessons.map((lesson) => <button key={lesson.id} type="button" onClick={() => toggleLesson(lesson)} disabled={savingLesson === lesson.id} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 disabled:opacity-60"><span className={lesson.progress?.completed ? "text-emerald-600" : "text-slate-300"}>{lesson.progress?.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}</span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-800">{lesson.title}</span>{lesson.duration_minutes ? <span className="text-xs text-slate-400">{lesson.duration_minutes} minutes</span> : null}</span>{lesson.progress?.completed ? <span className="text-xs font-semibold text-emerald-600">Completed</span> : <Play size={16} className="text-blue-600" />}</button>)}</div> : <p className="px-4 py-4 text-sm text-slate-500">No published lessons in this module yet.</p>}</div>)}</div> : <div className="mt-6"><EmptyState title="Curriculum will appear here" description="Course modules and lessons will appear here when course content is available." /></div>}
+    </section>
+  </motion.div>;
 }

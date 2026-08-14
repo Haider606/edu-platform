@@ -1,0 +1,3 @@
+supabase/migrations/20260814230000_student_platform_backend.sql
+supabase/README.md
+src/services/studentService.js
