@@ -5,83 +5,99 @@ export default function ProtectedRoute({
   children,
   allowedRoles = [],
 }) {
-  const {
-    user,
-    role,
-    loading,
-    dashboardPath,
-  } = useAuth();
-
+  const { user, role, loading } = useAuth();
   const location = useLocation();
 
-  // -----------------------------------------
-  // Authentication is still loading
-  // -----------------------------------------
+  // Wait until authentication and role detection finish
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050508]">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-500" />
-
-          <p className="text-sm text-slate-300">
-            Checking your session...
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+          <p className="text-sm font-medium text-slate-600">
+            Checking access...
           </p>
         </div>
       </div>
     );
   }
 
-  // -----------------------------------------
-  // User is not authenticated
-  // -----------------------------------------
+  // Not logged in
   if (!user) {
     return (
       <Navigate
         to="/login"
         replace
-        state={{
-          from: location.pathname,
-        }}
+        state={{ from: location.pathname }}
       />
     );
   }
 
-  // -----------------------------------------
-  // User has no recognized role
-  // -----------------------------------------
-  if (!role) {
-    return <Navigate to="/access-denied" replace />;
-  }
+  /*
+   * Normalize role.
+   *
+   * AuthContext may return:
+   * "Teacher"
+   *
+   * or:
+   * { name: "Teacher" }
+   *
+   * or:
+   * { role: "Teacher" }
+   */
+  const normalizedRole =
+    typeof role === "string"
+      ? role.trim().toLowerCase()
+      : role?.name?.trim().toLowerCase() ||
+        role?.role?.trim().toLowerCase() ||
+        "";
 
-  // -----------------------------------------
-  // Check allowed roles
-  // -----------------------------------------
-  const hasPermission =
-    allowedRoles.length === 0 ||
-    allowedRoles.some(
-      (allowedRole) =>
-        String(allowedRole).toLowerCase() ===
-        String(role).toLowerCase()
-    );
+  const normalizedAllowedRoles = allowedRoles.map((item) =>
+    String(item).trim().toLowerCase()
+  );
 
-  // -----------------------------------------
-  // Wrong role
-  // -----------------------------------------
-  if (!hasPermission) {
+  console.log("PROTECTED ROUTE CHECK:", {
+    userId: user?.id,
+    role,
+    normalizedRole,
+    allowedRoles,
+    normalizedAllowedRoles,
+    path: location.pathname,
+  });
+
+  // Role not loaded / invalid
+  if (!normalizedRole) {
     return (
       <Navigate
         to="/access-denied"
         replace
         state={{
-          attemptedPath: location.pathname,
-          dashboardPath,
+          reason: "Role could not be determined.",
         }}
       />
     );
   }
 
-  // -----------------------------------------
+  // Role not authorized
+  if (!normalizedAllowedRoles.includes(normalizedRole)) {
+    console.warn("ACCESS DENIED:", {
+      role: normalizedRole,
+      allowedRoles: normalizedAllowedRoles,
+      path: location.pathname,
+    });
+
+    return (
+      <Navigate
+        to="/access-denied"
+        replace
+        state={{
+          reason: "You do not have permission to access this area.",
+          role: normalizedRole,
+        }}
+      />
+    );
+  }
+
   // Authorized
-  // -----------------------------------------
   return children;
 }

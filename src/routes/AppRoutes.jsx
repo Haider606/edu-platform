@@ -56,6 +56,24 @@ import Applications from "../pages/student/Applications";
 
 // Teacher
 import TeacherDashboard from "../pages/teacher/Dashboard";
+import TeacherCourses from "../pages/teacher/MyCourses";
+import TeacherStudents from "../pages/teacher/MyStudents";
+import TeacherStudentDetails from "../pages/teacher/StudentDetails";
+import TeacherAssignments from "../pages/teacher/Assignments";
+import TeacherAssignmentReview from "../pages/teacher/AssignmentReview";
+import TeacherGrades from "../pages/teacher/Grades";
+import TeacherAttendance from "../pages/teacher/Attendance";
+import TeacherLiveClasses from "../pages/teacher/LiveClasses";
+import TeacherRecordedLectures from "../pages/teacher/RecordedLectures";
+import TeacherStudyMaterials from "../pages/teacher/StudyMaterials";
+import TeacherCalendar from "../pages/teacher/Calendar";
+import TeacherAnnouncements from "../pages/teacher/Announcements";
+import TeacherMessages from "../pages/teacher/Messages";
+import TeacherNotifications from "../pages/teacher/Notifications";
+import TeacherDailyReport from "../pages/teacher/DailyReport";
+import TeacherInternship from "../pages/teacher/Internship";
+import TeacherProfile from "../pages/teacher/Profile";
+import TeacherSettings from "../pages/teacher/Settings";
 
 // Manager
 import ManagerDashboard from "../pages/manager/Dashboard";
@@ -296,11 +314,25 @@ export default function AppRoutes() {
           element={<Navigate to="dashboard" replace />}
         />
 
-        <Route
-          path="dashboard"
-          element={<TeacherDashboard />}
-        />
-
+        <Route path="dashboard" element={<TeacherDashboard />} />
+        <Route path="courses" element={<TeacherCourses />} />
+        <Route path="students" element={<TeacherStudents />} />
+        <Route path="students/:id" element={<TeacherStudentDetails />} />
+        <Route path="assignments" element={<TeacherAssignments />} />
+        <Route path="assignments/review" element={<TeacherAssignmentReview />} />
+        <Route path="grades" element={<TeacherGrades />} />
+        <Route path="attendance" element={<TeacherAttendance />} />
+        <Route path="live-classes" element={<TeacherLiveClasses />} />
+        <Route path="recorded-lectures" element={<TeacherRecordedLectures />} />
+        <Route path="study-materials" element={<TeacherStudyMaterials />} />
+        <Route path="calendar" element={<TeacherCalendar />} />
+        <Route path="announcements" element={<TeacherAnnouncements />} />
+        <Route path="messages" element={<TeacherMessages />} />
+        <Route path="notifications" element={<TeacherNotifications />} />
+        <Route path="daily-report" element={<TeacherDailyReport />} />
+        <Route path="internship" element={<TeacherInternship />} />
+        <Route path="profile" element={<TeacherProfile />} />
+        <Route path="settings" element={<TeacherSettings />} />
       </Route>
 
 
