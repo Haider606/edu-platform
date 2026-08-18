@@ -4,25 +4,38 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
+/*
+|--------------------------------------------------------------------------
+| ROLE → DASHBOARD
+|--------------------------------------------------------------------------
+*/
+
 const ROLE_DASHBOARDS = {
   Student: "/student/dashboard",
-  Teacher: "/teacher/dashboard",
+  Teacher: "/Teacher/dashboard",
   Manager: "/manager/dashboard",
   Admin: "/admin/dashboard",
 };
+
+/*
+|--------------------------------------------------------------------------
+| NORMALIZE ROLE
+|--------------------------------------------------------------------------
+*/
 
 function normalizeRole(roleName) {
   if (!roleName) {
     return null;
   }
 
-  const normalized = String(roleName).trim().toLowerCase();
+  const value = String(roleName).trim().toLowerCase();
 
   const roles = {
     student: "Student",
@@ -31,12 +44,28 @@ function normalizeRole(roleName) {
     admin: "Admin",
   };
 
-  return roles[normalized] || null;
+  return roles[value] || null;
 }
 
+/*
+|--------------------------------------------------------------------------
+| GET DASHBOARD
+|--------------------------------------------------------------------------
+*/
+
 export function getDashboardPath(role) {
+  if (!role) {
+    return null;
+  }
+
   return ROLE_DASHBOARDS[role] || null;
 }
+
+/*
+|--------------------------------------------------------------------------
+| AUTH PROVIDER
+|--------------------------------------------------------------------------
+*/
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -46,30 +75,53 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   /*
-   * ============================================================
-   * LOAD PROFILE + ROLE
-   * ============================================================
-   */
+  |--------------------------------------------------------------------------
+  | Refs
+  |--------------------------------------------------------------------------
+  */
+
+  const mountedRef = useRef(false);
+  const requestIdRef = useRef(0);
+
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD PROFILE + ROLE
+  |--------------------------------------------------------------------------
+  */
+
   const loadProfileAndRole = useCallback(async (currentUser) => {
+    const requestId = ++requestIdRef.current;
+
     console.log(
-      "AUTH FUNCTION STARTED",
-      currentUser?.id
+      "AUTH LOAD STARTED:",
+      currentUser?.email,
+      "REQUEST:",
+      requestId
     );
 
+    /*
+    |--------------------------------------------------------------------------
+    | No user
+    |--------------------------------------------------------------------------
+    */
+
     if (!currentUser) {
+      if (!mountedRef.current) {
+        return;
+      }
+
       setProfile(null);
       setRole(null);
+
       return;
     }
 
     try {
-      console.log("AUTH TRY STARTED");
-
       /*
-       * ========================================================
-       * STEP 1 — LOAD PROFILE
-       * ========================================================
-       */
+      |--------------------------------------------------------------------------
+      | STEP 1 — PROFILE
+      |--------------------------------------------------------------------------
+      */
 
       console.log("AUTH STEP 1: loading profile");
 
@@ -82,6 +134,18 @@ export function AuthProvider({ children }) {
         .eq("id", currentUser.id)
         .maybeSingle();
 
+      if (
+        !mountedRef.current ||
+        requestId !== requestIdRef.current
+      ) {
+        console.log(
+          "AUTH REQUEST CANCELLED AFTER PROFILE:",
+          requestId
+        );
+
+        return;
+      }
+
       console.log("AUTH STEP 1 RESULT:", {
         profileData,
         profileError,
@@ -89,7 +153,7 @@ export function AuthProvider({ children }) {
 
       if (profileError) {
         console.error(
-          "PROFILE ERROR:",
+          "AUTH PROFILE ERROR:",
           profileError
         );
 
@@ -99,17 +163,13 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      setProfile(profileData || null);
-
       /*
-       * ========================================================
-       * STEP 2 — LOAD USER ROLE
-       * ========================================================
-       */
+      |--------------------------------------------------------------------------
+      | STEP 2 — USER ROLE
+      |--------------------------------------------------------------------------
+      */
 
-      console.log(
-        "AUTH STEP 2: loading user role"
-      );
+      console.log("AUTH STEP 2: loading user role");
 
       const {
         data: userRoleData,
@@ -120,6 +180,18 @@ export function AuthProvider({ children }) {
         .eq("user_id", currentUser.id)
         .maybeSingle();
 
+      if (
+        !mountedRef.current ||
+        requestId !== requestIdRef.current
+      ) {
+        console.log(
+          "AUTH REQUEST CANCELLED AFTER USER ROLE:",
+          requestId
+        );
+
+        return;
+      }
+
       console.log("AUTH STEP 2 RESULT:", {
         userRoleData,
         userRoleError,
@@ -127,46 +199,55 @@ export function AuthProvider({ children }) {
 
       if (userRoleError) {
         console.error(
-          "USER ROLE ERROR:",
+          "AUTH USER ROLE ERROR:",
           userRoleError
         );
 
+        setProfile(profileData || null);
         setRole(null);
 
         return;
       }
 
-      /*
-       * No role assigned
-       */
       if (!userRoleData?.role_id) {
         console.warn(
-          "AUTH WARNING: No role assigned to user."
+          "AUTH WARNING: User has no assigned role."
         );
 
+        setProfile(profileData || null);
         setRole(null);
 
         return;
       }
 
       /*
-       * ========================================================
-       * STEP 3 — LOAD ROLE
-       * ========================================================
-       */
+      |--------------------------------------------------------------------------
+      | STEP 3 — ROLE
+      |--------------------------------------------------------------------------
+      */
 
-      console.log(
-        "AUTH STEP 3: loading role"
-      );
+      console.log("AUTH STEP 3: loading role");
 
       const {
         data: roleData,
         error: roleError,
       } = await supabase
         .from("roles")
-        .select("*")
+        .select("id, name")
         .eq("id", userRoleData.role_id)
         .maybeSingle();
+
+      if (
+        !mountedRef.current ||
+        requestId !== requestIdRef.current
+      ) {
+        console.log(
+          "AUTH REQUEST CANCELLED AFTER ROLE:",
+          requestId
+        );
+
+        return;
+      }
 
       console.log("AUTH STEP 3 RESULT:", {
         roleData,
@@ -175,64 +256,86 @@ export function AuthProvider({ children }) {
 
       if (roleError) {
         console.error(
-          "ROLE ERROR:",
+          "AUTH ROLE ERROR:",
           roleError
         );
 
+        setProfile(profileData || null);
         setRole(null);
 
         return;
       }
 
-      /*
-       * Role record does not exist
-       */
       if (!roleData) {
         console.warn(
           "AUTH WARNING: Role record not found."
         );
 
+        setProfile(profileData || null);
         setRole(null);
 
         return;
       }
 
       /*
-       * ========================================================
-       * NORMALIZE ROLE
-       * ========================================================
-       */
+      |--------------------------------------------------------------------------
+      | NORMALIZE ROLE
+      |--------------------------------------------------------------------------
+      */
 
-      const rawRoleName =
-        roleData?.name ??
-        roleData?.role_name ??
-        null;
+      const rawRoleName = roleData.name;
 
       const normalizedRole =
         normalizeRole(rawRoleName);
 
-      console.log("AUTH DEBUG:", {
-        userId: currentUser.id,
-        profile: profileData,
-        userRole: userRoleData,
-        roleData,
-        rawRoleName,
-        normalizedRole,
-      });
+      /*
+      |--------------------------------------------------------------------------
+      | DASHBOARD
+      |--------------------------------------------------------------------------
+      */
+
+      const dashboardPath =
+        getDashboardPath(normalizedRole);
+
+      console.log(
+        "AUTH FINAL RESULT:",
+        {
+          userId: currentUser.id,
+          email: currentUser.email,
+          roleId: roleData.id,
+          rawRoleName,
+          normalizedRole,
+          dashboardPath,
+        }
+      );
 
       /*
-       * ========================================================
-       * SAVE AUTH DATA
-       * ========================================================
-       */
+      |--------------------------------------------------------------------------
+      | SAVE STATE
+      |--------------------------------------------------------------------------
+      */
+
+      if (
+        !mountedRef.current ||
+        requestId !== requestIdRef.current
+      ) {
+        return;
+      }
 
       setProfile(profileData || null);
       setRole(normalizedRole);
     } catch (error) {
       console.error(
-        "Authentication data loading error:",
+        "AUTH PROFILE/ROLE ERROR:",
         error
       );
+
+      if (
+        !mountedRef.current ||
+        requestId !== requestIdRef.current
+      ) {
+        return;
+      }
 
       setProfile(null);
       setRole(null);
@@ -240,105 +343,57 @@ export function AuthProvider({ children }) {
   }, []);
 
   /*
-   * ============================================================
-   * REFRESH USER
-   * ============================================================
-   */
-
-  const refreshUser = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const {
-        data: { session: currentSession },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error(
-          "Session loading error:",
-          error
-        );
-
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setRole(null);
-
-        return;
-      }
-
-      const currentUser =
-        currentSession?.user ?? null;
-
-      setSession(currentSession);
-      setUser(currentUser);
-
-      if (currentUser) {
-        await loadProfileAndRole(currentUser);
-      } else {
-        setProfile(null);
-        setRole(null);
-      }
-    } catch (error) {
-      console.error(
-        "Refresh user error:",
-        error
-      );
-
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setRole(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadProfileAndRole]);
-
-  /*
-   * ============================================================
-   * INITIAL AUTHENTICATION
-   * ============================================================
-   */
+  |--------------------------------------------------------------------------
+  | INITIALIZE AUTH
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
+
+    let subscription = null;
 
     const initializeAuth = async () => {
+      console.log(
+        "AUTH INITIALIZATION STARTED"
+      );
+
       try {
         const {
-          data: { session: currentSession },
+          data: {
+            session: currentSession,
+          },
           error,
         } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error(
-            "Initial session error:",
-            error
-          );
-
-          if (mounted) {
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-            setRole(null);
-            setLoading(false);
-          }
-
+        if (!mountedRef.current) {
           return;
         }
 
-        if (!mounted) {
+        if (error) {
+          console.error(
+            "AUTH SESSION ERROR:",
+            error
+          );
+
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setRole(null);
+          setLoading(false);
+
           return;
         }
 
         const currentUser =
-          currentSession?.user ?? null;
+          currentSession?.user || null;
 
         setSession(currentSession);
         setUser(currentUser);
 
         if (currentUser) {
+          setLoading(true);
+
           await loadProfileAndRole(
             currentUser
           );
@@ -347,103 +402,127 @@ export function AuthProvider({ children }) {
           setRole(null);
         }
 
-        if (mounted) {
+        if (mountedRef.current) {
           setLoading(false);
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | AUTH STATE LISTENER
+        |--------------------------------------------------------------------------
+        */
+
+        const {
+          data: {
+            subscription: authSubscription,
+          },
+        } = supabase.auth.onAuthStateChange(
+          (event, newSession) => {
+            if (!mountedRef.current) {
+              return;
+            }
+
+            console.log(
+              "AUTH STATE EVENT:",
+              event
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | SIGNED OUT
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+              event === "SIGNED_OUT" ||
+              !newSession?.user
+            ) {
+              requestIdRef.current += 1;
+
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+              setRole(null);
+              setLoading(false);
+
+              return;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | SIGNED IN / INITIAL SESSION / TOKEN REFRESH
+            |--------------------------------------------------------------------------
+            */
+
+            setSession(newSession);
+            setUser(newSession.user);
+            setLoading(true);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Let Supabase finish its auth callback first.
+            |--------------------------------------------------------------------------
+            */
+
+            setTimeout(async () => {
+              if (!mountedRef.current) {
+                return;
+              }
+
+              await loadProfileAndRole(
+                newSession.user
+              );
+
+              if (mountedRef.current) {
+                setLoading(false);
+              }
+            }, 0);
+          }
+        );
+
+        subscription = authSubscription;
       } catch (error) {
         console.error(
-          "Authentication initialization error:",
+          "AUTH INITIALIZATION ERROR:",
           error
         );
 
-        if (mounted) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setRole(null);
-          setLoading(false);
+        if (!mountedRef.current) {
+          return;
         }
+
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        setLoading(false);
       }
     };
 
     initializeAuth();
 
     /*
-     * ==========================================================
-     * SUPABASE AUTH STATE LISTENER
-     * ==========================================================
-     */
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        if (!mounted) {
-          return;
-        }
-
-        setSession(newSession ?? null);
-        setUser(newSession?.user ?? null);
-
-        /*
-         * SIGNED OUT
-         */
-        if (event === "SIGNED_OUT") {
-          setProfile(null);
-          setRole(null);
-          setLoading(false);
-
-          return;
-        }
-
-        /*
-         * New authenticated session
-         */
-        if (newSession?.user) {
-          setLoading(true);
-
-          /*
-           * Run after Supabase auth callback
-           * completes.
-           */
-          setTimeout(async () => {
-            if (!mounted) {
-              return;
-            }
-
-            await loadProfileAndRole(
-              newSession.user
-            );
-
-            if (mounted) {
-              setLoading(false);
-            }
-          }, 0);
-        } else {
-          setProfile(null);
-          setRole(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    /*
-     * ==========================================================
-     * CLEANUP
-     * ==========================================================
-     */
+    |--------------------------------------------------------------------------
+    | CLEANUP
+    |--------------------------------------------------------------------------
+    */
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      mountedRef.current = false;
+
+      requestIdRef.current += 1;
+
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, [loadProfileAndRole]);
 
   /*
-   * ============================================================
-   * SIGN IN
-   * ============================================================
-   */
+  |--------------------------------------------------------------------------
+  | SIGN IN
+  |--------------------------------------------------------------------------
+  */
 
   const signIn = useCallback(
     async (email, password) => {
@@ -451,7 +530,7 @@ export function AuthProvider({ children }) {
         data,
         error,
       } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -465,18 +544,22 @@ export function AuthProvider({ children }) {
   );
 
   /*
-   * ============================================================
-   * SIGN UP
-   * ============================================================
-   */
+  |--------------------------------------------------------------------------
+  | SIGN UP
+  |--------------------------------------------------------------------------
+  */
 
   const signUp = useCallback(
-    async (email, password, fullName) => {
+    async (
+      email,
+      password,
+      fullName
+    ) => {
       const {
         data,
         error,
       } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
@@ -495,40 +578,129 @@ export function AuthProvider({ children }) {
   );
 
   /*
-   * ============================================================
-   * SIGN OUT
-   * ============================================================
-   */
+  |--------------------------------------------------------------------------
+  | SIGN OUT
+  |--------------------------------------------------------------------------
+  */
 
-  const signOut = useCallback(async () => {
-    const { error } =
-      await supabase.auth.signOut();
+  const signOut = useCallback(
+    async () => {
+      requestIdRef.current += 1;
 
-    if (error) {
-      throw error;
-    }
+      const {
+        error,
+      } = await supabase.auth.signOut();
 
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    setRole(null);
-  }, []);
+      if (error) {
+        throw error;
+      }
+
+      if (!mountedRef.current) {
+        return;
+      }
+
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setRole(null);
+      setLoading(false);
+    },
+    []
+  );
 
   /*
-   * ============================================================
-   * CURRENT USER
-   * ============================================================
-   */
+  |--------------------------------------------------------------------------
+  | REFRESH USER
+  |--------------------------------------------------------------------------
+  */
 
-  const getCurrentUser = useCallback(() => {
-    return user;
-  }, [user]);
+  const refreshUser = useCallback(
+    async () => {
+      if (!mountedRef.current) {
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const {
+          data: {
+            session: currentSession,
+          },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!mountedRef.current) {
+          return;
+        }
+
+        const currentUser =
+          currentSession?.user || null;
+
+        setSession(currentSession);
+        setUser(currentUser);
+
+        if (currentUser) {
+          await loadProfileAndRole(
+            currentUser
+          );
+        } else {
+          setProfile(null);
+          setRole(null);
+        }
+      } catch (error) {
+        console.error(
+          "AUTH REFRESH ERROR:",
+          error
+        );
+
+        if (!mountedRef.current) {
+          return;
+        }
+
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [loadProfileAndRole]
+  );
 
   /*
-   * ============================================================
-   * CONTEXT VALUE
-   * ============================================================
-   */
+  |--------------------------------------------------------------------------
+  | CURRENT USER
+  |--------------------------------------------------------------------------
+  */
+
+  const getCurrentUser =
+    useCallback(() => {
+      return user;
+    }, [user]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | DASHBOARD PATH
+  |--------------------------------------------------------------------------
+  */
+
+  const dashboardPath = useMemo(() => {
+    return getDashboardPath(role);
+  }, [role]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | CONTEXT VALUE
+  |--------------------------------------------------------------------------
+  */
 
   const value = useMemo(
     () => ({
@@ -538,9 +710,10 @@ export function AuthProvider({ children }) {
       role,
       loading,
 
-      isAuthenticated: Boolean(
-        user && session
-      ),
+      isAuthenticated:
+        Boolean(user && session),
+
+      dashboardPath,
 
       signIn,
       signUp,
@@ -548,9 +721,6 @@ export function AuthProvider({ children }) {
 
       refreshUser,
       getCurrentUser,
-
-      dashboardPath:
-        getDashboardPath(role),
     }),
     [
       user,
@@ -558,6 +728,7 @@ export function AuthProvider({ children }) {
       profile,
       role,
       loading,
+      dashboardPath,
       signIn,
       signUp,
       signOut,
@@ -566,27 +737,24 @@ export function AuthProvider({ children }) {
     ]
   );
 
-  /*
-   * ============================================================
-   * PROVIDER
-   * ============================================================
-   */
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={value}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
 /*
- * ==============================================================
- * USE AUTH
- * ==============================================================
- */
+|--------------------------------------------------------------------------
+| USE AUTH
+|--------------------------------------------------------------------------
+*/
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
     throw new Error(

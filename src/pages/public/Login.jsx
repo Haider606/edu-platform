@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -16,7 +16,9 @@ import {
   KeyRound,
   X,
 } from "lucide-react";
+
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/AuthContext";
 
 const features = [
   "Live classes with expert instructors",
@@ -26,6 +28,15 @@ const features = [
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const {
+    signIn,
+    user,
+    role,
+    dashboardPath,
+    loading: authLoading,
+  } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,8 +54,14 @@ export default function Login() {
   const [forgotMessage, setForgotMessage] = useState("");
   const [forgotError, setForgotError] = useState("");
 
+  /*
+   * ------------------------------------------------------------
+   * FRIENDLY AUTH ERRORS
+   * ------------------------------------------------------------
+   */
+
   const friendlyAuthError = (message = "") => {
-    const text = message.toLowerCase();
+    const text = String(message).toLowerCase();
 
     if (
       text.includes("invalid login credentials") ||
@@ -62,12 +79,108 @@ export default function Login() {
       return "Too many attempts. Please wait a few minutes and try again.";
     }
 
-    if (text.includes("network")) {
+    if (
+      text.includes("network") ||
+      text.includes("fetch")
+    ) {
       return "We couldn't connect to the server. Please check your internet connection.";
     }
 
     return "We couldn't sign you in. Please check your details and try again.";
   };
+
+  /*
+   * ------------------------------------------------------------
+   * ROLE BASED REDIRECT
+   * ------------------------------------------------------------
+   *
+   * IMPORTANT:
+   *
+   * Login does NOT decide whether the user is a student,
+   * teacher, manager or admin.
+   *
+   * AuthContext decides that.
+   *
+   * Example:
+   *
+   * Student -> /student/dashboard
+   * Teacher -> /teacher/dashboard
+   * Manager -> /manager/dashboard
+   * Admin   -> /admin/dashboard
+   */
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
+      return;
+    }
+
+    if (!role) {
+      setSuccess("Signed in successfully. Loading your account...");
+      return;
+    }
+
+    if (!dashboardPath) {
+      console.error("LOGIN: dashboard path missing", {
+        userId: user.id,
+        email: user.email,
+        role,
+        dashboardPath,
+      });
+
+      setError(
+        `Your role "${role}" does not have a dashboard configured.`
+      );
+
+      return;
+    }
+
+    /*
+     * If already on the correct dashboard,
+     * do nothing.
+     */
+    if (location.pathname === dashboardPath) {
+      return;
+    }
+
+    console.log("LOGIN REDIRECT", {
+      userId: user.id,
+      email: user.email,
+      role,
+      dashboardPath,
+      currentPath: location.pathname,
+    });
+
+    setSuccess(`Signed in as ${role}. Redirecting...`);
+
+    /*
+     * Small delay gives AuthContext state time to settle
+     * and prevents navigation racing with auth initialization.
+     */
+    const timer = setTimeout(() => {
+      navigate(dashboardPath, {
+        replace: true,
+      });
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [
+    authLoading,
+    user,
+    role,
+    dashboardPath,
+    location.pathname,
+    navigate,
+  ]);
+
+  /*
+   * ------------------------------------------------------------
+   * LOGIN
+   * ------------------------------------------------------------
+   */
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -95,47 +208,60 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { data, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
+      console.log("LOGIN STARTED", cleanEmail);
 
-      if (authError) {
-        setError(friendlyAuthError(authError.message));
-        return;
-      }
+      const data = await signIn(cleanEmail, password);
 
-      if (!data?.session || !data?.user) {
+      console.log("LOGIN AUTH SUCCESS", {
+        userId: data?.user?.id,
+        email: data?.user?.email,
+        hasSession: Boolean(data?.session),
+      });
+
+      if (!data?.user || !data?.session) {
         setError(
           "Your account could not be signed in. Please try again."
         );
         return;
       }
 
-      setSuccess("Signed in successfully. Redirecting...");
-
       /*
-       * IMPORTANT:
-       * We intentionally do not guess your user_roles database schema here.
+       * DO NOT NAVIGATE HERE.
        *
-       * Once your existing role structure is confirmed, role-based routing
-       * can safely be connected here.
+       * AuthContext now loads:
        *
-       * For now, successful Supabase authentication sends the user to the
-       * existing student dashboard.
+       * user
+       * ↓
+       * profile
+       * ↓
+       * user_roles
+       * ↓
+       * roles
+       * ↓
+       * role
+       *
+       * The useEffect above redirects after role is available.
        */
 
-      navigate("/student/dashboard", { replace: true });
+      setSuccess(
+        "Signed in successfully. Checking your account..."
+      );
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("LOGIN ERROR:", err);
+
       setError(
-        "Something went wrong while signing in. Please try again."
+        friendlyAuthError(err?.message)
       );
     } finally {
       setLoading(false);
     }
   };
+
+  /*
+   * ------------------------------------------------------------
+   * FORGOT PASSWORD
+   * ------------------------------------------------------------
+   */
 
   const handleForgotPassword = async (event) => {
     event.preventDefault();
@@ -159,12 +285,16 @@ export default function Login() {
 
     try {
       const { error: resetError } =
-        await supabase.auth.resetPasswordForEmail(cleanEmail, {
-          redirectTo: `${window.location.origin}/login`,
-        });
+        await supabase.auth.resetPasswordForEmail(
+          cleanEmail,
+          {
+            redirectTo: `${window.location.origin}/login`,
+          }
+        );
 
       if (resetError) {
-        const message = resetError.message.toLowerCase();
+        const message =
+          String(resetError.message).toLowerCase();
 
         if (message.includes("rate limit")) {
           setForgotError(
@@ -183,7 +313,8 @@ export default function Login() {
         "Password reset instructions have been sent to your email."
       );
     } catch (err) {
-      console.error("Password reset error:", err);
+      console.error("PASSWORD RESET ERROR:", err);
+
       setForgotError(
         "Something went wrong. Please try again."
       );
@@ -192,17 +323,31 @@ export default function Login() {
     }
   };
 
+  /*
+   * ------------------------------------------------------------
+   * UI
+   * ------------------------------------------------------------
+   */
+
+  const isBusy = loading || authLoading;
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <div className="grid min-h-screen lg:grid-cols-2">
-        {/* LEFT SIDE */}
+
+        {/* =====================================================
+            LEFT SIDE
+        ====================================================== */}
+
         <section className="relative hidden overflow-hidden bg-[#0F172A] lg:flex">
           <div className="absolute inset-0">
             <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
+
             <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
           </div>
 
           <div className="relative z-10 flex w-full flex-col justify-between p-10 xl:p-16">
+
             <Link
               to="/"
               className="inline-flex w-fit items-center gap-3 text-white"
@@ -212,32 +357,48 @@ export default function Login() {
               </span>
 
               <span className="text-lg font-bold">
-                EduVerse <span className="text-blue-400">AI</span>
+                EduVerse{" "}
+                <span className="text-blue-400">
+                  AI
+                </span>
               </span>
             </Link>
 
             <div className="relative mx-auto w-full max-w-xl">
+
               <motion.div
-                initial={{ opacity: 0, y: 25 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7 }}
+                initial={{
+                  opacity: 0,
+                  y: 25,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                transition={{
+                  duration: 0.7,
+                }}
               >
+
                 <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-slate-300">
                   <span className="h-2 w-2 rounded-full bg-emerald-400" />
+
                   Your learning journey continues here
                 </div>
 
                 <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-white xl:text-6xl">
                   Learn today.
                   <br />
+
                   <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">
                     Lead tomorrow.
                   </span>
                 </h1>
 
                 <p className="mt-6 max-w-lg text-lg leading-8 text-slate-400">
-                  Access your courses, live classes, assignments,
-                  progress and career opportunities from one powerful
+                  Access your courses, live classes,
+                  assignments, progress and career
+                  opportunities from one powerful
                   learning platform.
                 </p>
 
@@ -251,15 +412,19 @@ export default function Login() {
                         size={18}
                         className="shrink-0 text-blue-400"
                       />
+
                       {feature}
                     </div>
                   ))}
                 </div>
+
               </motion.div>
 
-              {/* Decorative cards */}
               <motion.div
-                animate={{ y: [0, -10, 0], rotate: [0, 1, 0] }}
+                animate={{
+                  y: [0, -10, 0],
+                  rotate: [0, 1, 0],
+                }}
                 transition={{
                   duration: 5,
                   repeat: Infinity,
@@ -274,7 +439,9 @@ export default function Login() {
               </motion.div>
 
               <motion.div
-                animate={{ y: [0, 10, 0] }}
+                animate={{
+                  y: [0, 10, 0],
+                }}
                 transition={{
                   duration: 4,
                   repeat: Infinity,
@@ -287,23 +454,38 @@ export default function Login() {
                   className="text-violet-400"
                 />
               </motion.div>
+
             </div>
 
             <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} EduVerse AI. Learn.
-              Build. Grow.
+              © {new Date().getFullYear()} EduVerse AI.
+              Learn. Build. Grow.
             </p>
+
           </div>
         </section>
 
-        {/* RIGHT SIDE */}
+        {/* =====================================================
+            RIGHT SIDE
+        ====================================================== */}
+
         <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
+
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55 }}
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.55,
+            }}
             className="w-full max-w-md"
           >
+
             <Link
               to="/"
               className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
@@ -312,20 +494,27 @@ export default function Login() {
               Back to website
             </Link>
 
+            {/* Mobile logo */}
+
             <div className="mb-8 lg:hidden">
               <div className="mb-4 flex items-center gap-3">
+
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
                   <Sparkles size={19} />
                 </span>
 
                 <span className="text-lg font-bold">
                   EduVerse{" "}
-                  <span className="text-blue-600">AI</span>
+                  <span className="text-blue-600">
+                    AI
+                  </span>
                 </span>
+
               </div>
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-8">
+
               <div className="mb-8">
                 <h2 className="text-3xl font-bold tracking-tight text-slate-900">
                   Welcome back
@@ -337,24 +526,47 @@ export default function Login() {
               </div>
 
               <AnimatePresence mode="wait">
+
                 {error && (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    initial={{
+                      opacity: 0,
+                      y: -8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: -8,
+                    }}
                     role="alert"
                     className="mb-5 flex gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
                   >
-                    <X size={18} className="mt-0.5 shrink-0" />
+                    <X
+                      size={18}
+                      className="mt-0.5 shrink-0"
+                    />
+
                     <span>{error}</span>
                   </motion.div>
                 )}
 
                 {success && (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    initial={{
+                      opacity: 0,
+                      y: -8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: -8,
+                    }}
                     role="status"
                     className="mb-5 flex gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
                   >
@@ -362,12 +574,22 @@ export default function Login() {
                       size={18}
                       className="mt-0.5 shrink-0"
                     />
+
                     <span>{success}</span>
                   </motion.div>
                 )}
+
               </AnimatePresence>
 
-              <form onSubmit={handleLogin} className="space-y-5">
+              {/* FORM */}
+
+              <form
+                onSubmit={handleLogin}
+                className="space-y-5"
+              >
+
+                {/* EMAIL */}
+
                 <div>
                   <label
                     htmlFor="login-email"
@@ -377,6 +599,7 @@ export default function Login() {
                   </label>
 
                   <div className="relative">
+
                     <Mail
                       size={18}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -391,13 +614,19 @@ export default function Login() {
                         setEmail(event.target.value)
                       }
                       placeholder="you@example.com"
-                      className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      disabled={isBusy}
+                      className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:bg-slate-50"
                     />
+
                   </div>
                 </div>
 
+                {/* PASSWORD */}
+
                 <div>
+
                   <div className="mb-2 flex items-center justify-between">
+
                     <label
                       htmlFor="login-password"
                       className="block text-sm font-medium text-slate-700"
@@ -417,9 +646,11 @@ export default function Login() {
                     >
                       Forgot password?
                     </button>
+
                   </div>
 
                   <div className="relative">
+
                     <Lock
                       size={18}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -427,14 +658,19 @@ export default function Login() {
 
                     <input
                       id="login-password"
-                      type={showPassword ? "text" : "password"}
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
                       autoComplete="current-password"
                       value={password}
                       onChange={(event) =>
                         setPassword(event.target.value)
                       }
                       placeholder="Enter your password"
-                      className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      disabled={isBusy}
+                      className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:bg-slate-50"
                     />
 
                     <button
@@ -445,7 +681,9 @@ export default function Login() {
                           : "Show password"
                       }
                       onClick={() =>
-                        setShowPassword((value) => !value)
+                        setShowPassword(
+                          (value) => !value
+                        )
                       }
                       className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                     >
@@ -455,48 +693,67 @@ export default function Login() {
                         <Eye size={18} />
                       )}
                     </button>
+
                   </div>
+
                 </div>
 
+                {/* REMEMBER */}
+
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-500">
+
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(event) =>
-                      setRememberMe(event.target.checked)
+                      setRememberMe(
+                        event.target.checked
+                      )
                     }
                     className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
+
                   Remember me
+
                 </label>
+
+                {/* LOGIN BUTTON */}
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isBusy}
                   className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? (
+
+                  {isBusy ? (
                     <>
                       <Loader2
                         size={18}
                         className="animate-spin"
                       />
-                      Signing in...
+
+                      {authLoading
+                        ? "Checking account..."
+                        : "Signing in..."}
                     </>
                   ) : (
                     <>
                       Sign In
+
                       <ArrowRight
                         size={17}
                         className="transition-transform group-hover:translate-x-1"
                       />
                     </>
                   )}
+
                 </button>
+
               </form>
 
               <p className="mt-7 text-center text-sm text-slate-500">
                 Don't have an account?{" "}
+
                 <Link
                   to="/register"
                   className="font-semibold text-blue-600 hover:text-blue-700"
@@ -504,13 +761,20 @@ export default function Login() {
                   Create an account
                 </Link>
               </p>
+
             </div>
+
           </motion.div>
+
         </section>
       </div>
 
-      {/* FORGOT PASSWORD MODAL */}
+      {/* =======================================================
+          FORGOT PASSWORD MODAL
+      ======================================================== */}
+
       <AnimatePresence>
+
         {forgotOpen && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -518,19 +782,37 @@ export default function Login() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/50 p-5 backdrop-blur-sm"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
+              if (
+                event.target === event.currentTarget
+              ) {
                 setForgotOpen(false);
               }
             }}
           >
+
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              initial={{
+                opacity: 0,
+                scale: 0.96,
+                y: 10,
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0.96,
+                y: 10,
+              }}
               className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl"
             >
+
               <div className="mb-6 flex items-start justify-between">
+
                 <div>
+
                   <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                     <KeyRound size={21} />
                   </div>
@@ -543,16 +825,20 @@ export default function Login() {
                     Enter your email and we'll send you a secure
                     password reset link.
                   </p>
+
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setForgotOpen(false)}
+                  onClick={() =>
+                    setForgotOpen(false)
+                  }
                   className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                   aria-label="Close"
                 >
                   <X size={19} />
                 </button>
+
               </div>
 
               {forgotError && (
@@ -577,7 +863,9 @@ export default function Login() {
                 onSubmit={handleForgotPassword}
                 className="space-y-4"
               >
+
                 <div>
+
                   <label
                     htmlFor="forgot-email"
                     className="mb-2 block text-sm font-medium text-slate-700"
@@ -590,11 +878,14 @@ export default function Login() {
                     type="email"
                     value={forgotEmail}
                     onChange={(event) =>
-                      setForgotEmail(event.target.value)
+                      setForgotEmail(
+                        event.target.value
+                      )
                     }
                     placeholder="you@example.com"
                     className="h-12 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   />
+
                 </div>
 
                 <button
@@ -602,22 +893,29 @@ export default function Login() {
                   disabled={forgotLoading}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                 >
+
                   {forgotLoading ? (
                     <>
                       <Loader2
                         size={18}
                         className="animate-spin"
                       />
+
                       Sending...
                     </>
                   ) : (
                     "Send Reset Link"
                   )}
+
                 </button>
+
               </form>
+
             </motion.div>
+
           </motion.div>
         )}
+
       </AnimatePresence>
     </main>
   );
